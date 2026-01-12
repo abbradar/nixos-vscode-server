@@ -183,29 +183,21 @@
         echo 0 > "$patched_file"
       }
 
-      # Initialize arrays for bins_dirs_1 and bins_dirs_2
-      bins_dirs_1=()
-      bins_dirs_2=()
+      # Initialize arrays
+      bins_dirs=()
 
-      # Populate bins_dirs_1 and bins_dirs_2 based on installPaths
+      # Populate bins_dirs based on installPaths
       for current_install_path in "''${installPaths[@]}"; do
-        bins_dirs_1+=("$current_install_path/bin")
-        bins_dirs_2+=("$current_install_path/cli/servers")
+        bins_dirs+=("$current_install_path/bin" "$current_install_path/cli/servers")
       done
 
       # Create directories and patch existing bins
-      for bins_dir_1 in "''${bins_dirs_1[@]}"; do
-        mkdir -p "$bins_dir_1"
-        while read -rd ''' bin; do
+      for bins_dir in "''${bins_dirs[@]}"; do
+        mkdir -p "$bins_dir"
+        while read -rd ''' node_bin; do
+          bin=$(dirname "$node_bin")
           patch_bin "$bin" "$(dirname "$(dirname "$bin")")"
-        done < <(find "$bins_dir_1" -mindepth 1 -maxdepth 1 -type d -printf '%p\0')
-      done
-      for bins_dir_2 in "''${bins_dirs_2[@]}"; do
-        mkdir -p "$bins_dir_2"
-        while read -rd ''' bin; do
-          bin="$bin/server"
-          patch_bin "$bin" "$(dirname "$(dirname "$bin")")"
-        done < <(find "$bins_dir_2" -mindepth 1 -maxdepth 1 -type d -printf '%p\0')
+        done < <(find "$bins_dir" -maxdepth 4 -type f -name node -executable -not -path "*/node_modules/*" -printf '%p\0')
       done
 
       # Watch for new installations
@@ -234,7 +226,7 @@
           # See the comments above Restart in the service config.
           exit 0
         fi
-      done < <(inotifywait -q -m -e CREATE,ISDIR -e DELETE_SELF --format '%w:%f:%e' "''${bins_dirs_1[@]}" "''${bins_dirs_2[@]}")
+      done < <(inotifywait -q -m -e CREATE,ISDIR -e DELETE_SELF --format '%w:%f:%e' "''${bins_dirs[@]}")
     '';
   };
 in
