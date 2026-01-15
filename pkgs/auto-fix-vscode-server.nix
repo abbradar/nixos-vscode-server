@@ -197,7 +197,7 @@
         while read -rd ''' node_bin; do
           bin=$(dirname "$node_bin")
           patch_bin "$bin" "$(dirname "$(dirname "$bin")")"
-        done < <(find "$bins_dir" -maxdepth 4 -type f -name node -executable -not -path "*/node_modules/*" -printf '%p\0')
+        done < <(find "$bins_dir" -maxdepth 4 -type f -name node -executable -not -path "*/node_modules/*" -print0)
       done
 
       # Watch for new installations
@@ -205,22 +205,20 @@
         # A new version of the VS Code Server is being created.
         if [[ $event == 'CREATE,ISDIR' ]]; then
           actual_dir="$bins_dir$bin"
-          actual_install_path="$(dirname "$bins_dir")"
-          if [[ "$bins_dir" == */cli/servers/ ]]; then
-            actual_dir="$actual_dir/server"
-            # Hope that VSCode will not die if the directory exists when it tries to install, otherwise we'll need to
-            # use a coproc to wait for the directory to be created without entering in a race, then watch for the node
-            # file to be created (probably while also avoiding a race)
-            # https://unix.stackexchange.com/a/185370
-            mkdir -p "$actual_dir"
-            actual_install_path="$(dirname "$(dirname "$bins_dir")")"
-          fi
           echo "VS Code server is being installed in $actual_dir..." >&2
-          # Quickly create a node file, which will be removed when vscode installs its own version
-          touch "$actual_dir/node"
-          # Hope we don't race...
-          inotifywait -qq -e DELETE_SELF "$actual_dir/node"
-          patch_bin "$actual_dir" "$actual_install_path"
+          # Wait for the node file to get created.
+          while true; do
+            node_bin=$(find "$bins_dir" -maxdepth 4 -type f -name node -executable -not -path "*/node_modules/*" -print0 | head -zn1)
+            if [ -n "$node_bin" ]; then
+              break
+            fi
+            sleep 0.1
+          done
+          while [ -n "$(fuser "$node_bin")" ]; do
+            sleep 0.1
+          done
+          bin=$(dirname "$node_bin")
+          patch_bin "$bin" "$(dirname "$(dirname "$bin")")"
         # The monitored directory is deleted, e.g. when "Uninstall VS Code Server from Host" has been run.
         elif [[ $event == DELETE_SELF ]]; then
           # See the comments above Restart in the service config.
