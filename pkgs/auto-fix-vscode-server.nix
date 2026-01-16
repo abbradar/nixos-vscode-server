@@ -7,6 +7,7 @@
   coreutils,
   findutils,
   inotify-tools,
+  psmisc,
   patchelf,
   stdenv,
   curl,
@@ -129,7 +130,7 @@
 
   autoFixScript = writeShellApplication {
     name = "auto-fix-vscode-server";
-    runtimeInputs = [ coreutils findutils inotify-tools ];
+    runtimeInputs = [ coreutils findutils inotify-tools psmisc ];
     text = ''
       # Convert installPath list to an array
       IFS=':' read -r -a installPaths <<< "${lib.concatStringsSep ":" installPath}"
