@@ -202,7 +202,7 @@
       # Create directories and patch existing bins
       for bins_dir in "''${bins_dirs[@]}"; do
         mkdir -p "$bins_dir"
-        while read -rd ''' node_bin; do
+        while read -r node_bin; do
           bin=$(dirname "$node_bin")
           patch_bin "$bin" "$(dirname "$(dirname "$bin")")"
         done < <(find "$bins_dir" -maxdepth 4 -type f -name node -executable -not -path "*/node_modules/*" -print)
