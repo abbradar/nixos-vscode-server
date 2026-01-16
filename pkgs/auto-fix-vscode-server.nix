@@ -8,6 +8,7 @@
   findutils,
   inotify-tools,
   psmisc,
+  gnugrep,
   patchelf,
   stdenv,
   curl,
@@ -123,7 +124,7 @@
 
   autoFixScript = writeShellApplication {
     name = "auto-fix-vscode-server";
-    runtimeInputs = [ coreutils findutils inotify-tools psmisc ];
+    runtimeInputs = [ coreutils findutils inotify-tools psmisc gnugrep ];
     text = ''
       set -e
 
@@ -212,6 +213,10 @@
       while IFS=: read -r bins_dir bin event; do
         # A new version of the VS Code Server is being created.
         if [[ $event == 'CREATE,ISDIR' ]]; then
+          # Check for the directory to satisfy a pattern so we won't be waiting on, e.g., creation of `bin/multiplex-server`.
+          if ! echo "$bin" | grep -Eq '^[a-z0-9]+$'; then
+            continue
+          fi
           actual_dir="$bins_dir$bin"
           echo "VS Code server is being installed in $actual_dir..." >&2
           # Wait for the node file to get created.
