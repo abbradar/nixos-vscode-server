@@ -71,6 +71,8 @@
     name = "patchelf-vscode-server";
     runtimeInputs = [ coreutils findutils patchelf ];
     text = ''
+      set -e
+
       bin_dir="$1"
       patched_file="$bin_dir/.nixos-patched"
 
@@ -132,6 +134,8 @@
     name = "auto-fix-vscode-server";
     runtimeInputs = [ coreutils findutils inotify-tools psmisc ];
     text = ''
+      set -e
+
       # Convert installPath list to an array
       IFS=':' read -r -a installPaths <<< "${lib.concatStringsSep ":" installPath}"
 
