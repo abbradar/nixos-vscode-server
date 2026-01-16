@@ -216,7 +216,7 @@
           echo "VS Code server is being installed in $actual_dir..." >&2
           # Wait for the node file to get created.
           while true; do
-            node_bin=$(find "$bins_dir" -maxdepth 4 -type f -name node -executable -not -path "*/node_modules/*" | head -n1)
+            node_bin=$(find "$actual_dir" -maxdepth 4 -type f -name node -executable -not -path "*/node_modules/*" | head -n1)
             if [ -n "$node_bin" ]; then
               break
             fi
