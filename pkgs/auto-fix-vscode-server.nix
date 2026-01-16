@@ -200,7 +200,7 @@
         while read -rd ''' node_bin; do
           bin=$(dirname "$node_bin")
           patch_bin "$bin" "$(dirname "$(dirname "$bin")")"
-        done < <(find "$bins_dir" -maxdepth 4 -type f -name node -executable -not -path "*/node_modules/*" -print0)
+        done < <(find "$bins_dir" -maxdepth 4 -type f -name node -executable -not -path "*/node_modules/*" -print)
       done
 
       # Watch for new installations
@@ -211,7 +211,7 @@
           echo "VS Code server is being installed in $actual_dir..." >&2
           # Wait for the node file to get created.
           while true; do
-            node_bin=$(find "$bins_dir" -maxdepth 4 -type f -name node -executable -not -path "*/node_modules/*" -print0 | head -zn1)
+            node_bin=$(find "$bins_dir" -maxdepth 4 -type f -name node -executable -not -path "*/node_modules/*" | head -n1)
             if [ -n "$node_bin" ]; then
               break
             fi
