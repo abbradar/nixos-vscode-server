@@ -188,7 +188,10 @@
 
       # Populate bins_dirs based on installPaths
       for current_install_path in "''${installPaths[@]}"; do
-        bins_dirs+=("$current_install_path/bin" "$current_install_path/cli/servers")
+        bins_dirs+=("$current_install_path/bin" "$current_install_path/bin" "$current_install_path/cli/servers")
+        for arch in arm64 x64 armhf; do
+          bins_dirs+=("$current_install_path/bin/linux-$arch")
+        done
       done
 
       # Create directories and patch existing bins
