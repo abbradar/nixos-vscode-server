@@ -213,8 +213,9 @@
       while IFS=: read -r bins_dir bin event; do
         # A new version of the VS Code Server is being created.
         if [[ $event == 'CREATE,ISDIR' ]]; then
-          # Check for the directory to satisfy a pattern so we won't be waiting on, e.g., creation of `bin/multiplex-server`.
-          if ! echo "$bin" | grep -Eq '^[a-z0-9]+$'; then
+          # Check for the directory to satisfy a pattern in `bin` so we won't be waiting on, e.g., creation of `bin/multiplex-server`.
+          parent_dir=$(basename "$bins_dir")
+          if [ "$parent_dir" = "bin" ] && ! echo "$bin" | grep -Eq '^[a-z0-9]+$'; then
             continue
           fi
           actual_dir="$bins_dir$bin"
