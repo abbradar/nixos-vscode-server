@@ -140,33 +140,44 @@
       # Convert installPath list to an array
       IFS=':' read -r -a installPaths <<< "${lib.concatStringsSep ":" installPath}"
 
+      # Returns 0 (success) when "$1" is already one of our replacements for the
+      # node binary, i.e. a symlink (FHS mode) or a shell wrapper script (its
+      # first bytes are the '#!' shebang). A raw, dynamically-linked ELF — the
+      # binary VS Code ships — returns non-zero.
+      is_patched_node () {
+        local node="$1"
+        [[ -e $node ]] || return 1
+        [[ -L $node ]] && return 0
+        [[ "$(head -c2 "$node" 2>/dev/null)" == '#!' ]]
+      }
+
       patch_bin () {
         local actual_dir="$1"
         local current_install_path="$2"
         local patched_file="$actual_dir/.nixos-patched"
+        local node="$actual_dir/node"
 
-        if [[ -e $patched_file ]]; then
-          return 0
-        fi
+        # Nothing to patch (yet) if node hasn't been extracted.
+        [[ -e $node ]] || return 0
 
-        # Backwards compatibility with previous versions of nixos-vscode-server.
-        local old_patched_file
-        old_patched_file="$(basename "$actual_dir")"
-        if [[ $old_patched_file == "server" ]]; then
-          old_patched_file="$(basename "$(dirname "$actual_dir")")"
-          old_patched_file="$current_install_path/.''${old_patched_file%%.*}.patched"
-        else
-          old_patched_file="$current_install_path/.''${old_patched_file%%-*}.patched"
-        fi
-        if [[ -e $old_patched_file ]]; then
-          echo "Migrating old nixos-vscode-server patch marker file to new location in $actual_dir." >&2
-          cp "$old_patched_file" "$patched_file"
+        # IMPORTANT: We deliberately do NOT trust the .nixos-patched marker as
+        # proof that node is patched. With the new cli/servers/<id>.staging/
+        # layout, VS Code's installer re-extracts the server several times
+        # (extract -> run node -> fails on NixOS -> delete dir -> re-extract),
+        # and each extraction overwrites our wrapper at "node" with a fresh ELF
+        # while the marker file (which is not part of VS Code's tarball)
+        # survives. A write-once marker check would skip every retry after the
+        # first, leaving node as an unrunnable raw ELF. Instead we inspect the
+        # actual node binary on every event and re-patch whenever it has
+        # reverted to a raw ELF, so we re-enter the race until our wrapper is
+        # the binary VS Code finally launches.
+        if is_patched_node "$node"; then
           return 0
         fi
 
         echo "Patching Node.js of VS Code server installation in $actual_dir..." >&2
 
-        mv "$actual_dir/node" "$actual_dir/node.patched"
+        mv "$node" "$actual_dir/node.patched"
 
         ${optionalString (enableFHS) ''
         ln -sfT ${nodejsFHS}/bin/node "$actual_dir/node"
